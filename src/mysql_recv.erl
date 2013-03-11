@@ -31,7 +31,7 @@
 %%--------------------------------------------------------------------
 %% External exports (should only be used by the 'mysql_conn' module)
 %%--------------------------------------------------------------------
--export([start_link/4
+-export([start_link/5
 	]).
 
 -record(state, {
@@ -42,7 +42,6 @@
 	 }).
 
 -define(SECURE_CONNECTION, 32768).
--define(CONNECT_TIMEOUT, 5000).
 
 %%====================================================================
 %% External functions
@@ -63,7 +62,7 @@
 %%           Socket  = term(), gen_tcp socket
 %%           Reason  = atom() | string()
 %%--------------------------------------------------------------------
-start_link(Host, Port, LogFun, Parent)
+start_link(Host, Port, LogFun, Parent, Timeout)
   when is_list(Host), is_integer(Port) ->
     RecvPid =
 	spawn_link(fun () ->
@@ -75,7 +74,7 @@ start_link(Host, Port, LogFun, Parent)
 	    {error, E};
 	{mysql_recv, RecvPid, init, {ok, Socket}} ->
 	    {ok, RecvPid, Socket}
-    after ?CONNECT_TIMEOUT ->
+    after Timeout ->
 	    catch exit(RecvPid, kill),
 	    {error, timeout}
     end.

@@ -70,8 +70,8 @@
 %%--------------------------------------------------------------------
 %% External exports
 %%--------------------------------------------------------------------
--export([start/8,
-	 start_link/8,
+-export([start/9,
+	 start_link/9,
 	 fetch/3,
 	 fetch/4,
 	 execute/5,
@@ -137,25 +137,28 @@
 %%           Password = string()
 %%           Database = string()
 %%           LogFun   = undefined | function() of arity 3
+%%           Timeout  = integer()
 %% Descrip.: Starts a mysql_conn process that connects to a MySQL
 %%           server, logs in and chooses a database.
 %% Returns : {ok, Pid} | {error, Reason}
 %%           Pid    = pid()
 %%           Reason = string()
 %%--------------------------------------------------------------------
-start(Host, Port, User, Password, Database, LogFun, Encoding, PoolId) ->
+start(Host, Port, User, Password, Database, LogFun,
+      Encoding, PoolId, Timeout) ->
     ConnPid = self(),
     Pid = spawn(fun () ->
 			init(Host, Port, User, Password, Database,
-			     LogFun, Encoding, PoolId, ConnPid)
+			     LogFun, Encoding, PoolId, ConnPid, Timeout)
 		end),
     post_start(Pid, LogFun).
 
-start_link(Host, Port, User, Password, Database, LogFun, Encoding, PoolId) ->
+start_link(Host, Port, User, Password, Database,
+           LogFun, Encoding, PoolId, Timeout) ->
     ConnPid = self(),
     Pid = spawn_link(fun () ->
 			     init(Host, Port, User, Password, Database,
-				  LogFun, Encoding, PoolId, ConnPid)
+				  LogFun, Encoding, PoolId, ConnPid, Timeout)
 		     end),
     post_start(Pid, LogFun).
 
@@ -316,8 +319,9 @@ send_msg(Pid, Msg, From, Timeout) ->
 %%           we were successfull.
 %% Returns : void() | does not return
 %%--------------------------------------------------------------------
-init(Host, Port, User, Password, Database, LogFun, Encoding, PoolId, Parent) ->
-    case mysql_recv:start_link(Host, Port, LogFun, self()) of
+init(Host, Port, User, Password, Database,
+     LogFun, Encoding, PoolId, Parent, Timeout) ->
+    case mysql_recv:start_link(Host, Port, LogFun, self(), Timeout) of
 	{ok, RecvPid, Sock} ->
 	    case mysql_init(Sock, RecvPid, User, Password, LogFun) of
 		{ok, Version} ->
