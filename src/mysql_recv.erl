@@ -63,7 +63,8 @@
 %%           Socket  = term(), gen_tcp socket
 %%           Reason  = atom() | string()
 %%--------------------------------------------------------------------
-start_link(Host, Port, LogFun, Parent) when is_list(Host), is_integer(Port) ->
+start_link(Host, Port, LogFun, Parent)
+  when is_list(Host), is_integer(Port) ->
     RecvPid =
 	spawn_link(fun () ->
 			   init(Host, Port, LogFun, Parent)
@@ -76,7 +77,7 @@ start_link(Host, Port, LogFun, Parent) when is_list(Host), is_integer(Port) ->
 	    {ok, RecvPid, Socket}
     after ?CONNECT_TIMEOUT ->
 	    catch exit(RecvPid, kill),
-	    {error, "timeout"}
+	    {error, timeout}
     end.
 
 
@@ -104,14 +105,13 @@ init(Host, Port, LogFun, Parent) ->
 			   data    = <<>>
 			  },
 	    loop(State);
-	E ->
+	{error, _Reason}=Error ->
 	    LogFun(?MODULE, ?LINE, error,
 		   fun() ->
 			   {"mysql_recv: Failed connecting to ~p:~p : ~p",
-			    [Host, Port, E]}
+			    [Host, Port, Error]}
 		   end),
-	    Msg = lists:flatten(io_lib:format("connect failed : ~p", [E])),
-	    Parent ! {mysql_recv, self(), init, {error, Msg}}
+	    Parent ! {mysql_recv, self(), init, Error}
     end.
 
 %%--------------------------------------------------------------------

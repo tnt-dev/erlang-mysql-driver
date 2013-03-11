@@ -357,11 +357,11 @@ init(Host, Port, User, Password, Database, LogFun, Encoding, PoolId, Parent) ->
 		{error, _Reason} ->
 		    Parent ! {mysql_conn, self(), {error, login_failed}}
 	    end;
-	E ->
+	{error, _Reason}=Error ->
 	    ?Log2(LogFun, error,
 		 "failed connecting to ~p:~p : ~p",
-		 [Host, Port, E]),
-	    Parent ! {mysql_conn, self(), {error, connect_failed}}
+		 [Host, Port, Error]),
+	    Parent ! {mysql_conn, self(), Error}
     end.
 
 %%--------------------------------------------------------------------
