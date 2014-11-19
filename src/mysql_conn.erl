@@ -325,10 +325,8 @@ init(Host, Port, User, Password, Database,
 	{ok, RecvPid, Sock} ->
 	    case mysql_init(Sock, RecvPid, User, Password, LogFun) of
 		{ok, Version} ->
-		    Db = iolist_to_binary(Database),
-		    case do_query(Sock, RecvPid, LogFun,
-				  <<"use `", Db/binary, "`">>,
-				  Version) of
+                    case set_database(Sock, RecvPid, LogFun,
+                                      Database, Version) of
 			{error, MySQLRes} ->
 			    ?Log2(LogFun, error,
 				 "mysql_conn: Failed changing to database "
@@ -338,25 +336,27 @@ init(Host, Port, User, Password, Database,
 			    Parent ! {mysql_conn, self(),
 				      {error, failed_changing_database}};
 
-			%% ResultType: data | updated
-			{_ResultType, _MySQLRes} ->
-			    Parent ! {mysql_conn, self(), ok},
-			    case Encoding of
-				undefined -> undefined;
-				_ ->
-				    EncodingBinary = list_to_binary(atom_to_list(Encoding)),
-				    do_query(Sock, RecvPid, LogFun,
-					     <<"set names '", EncodingBinary/binary, "'">>,
-					     Version)
-			    end,
-			    State = #state{mysql_version=Version,
-					   recv_pid = RecvPid,
-					   socket   = Sock,
-					   log_fun  = LogFun,
-					   pool_id  = PoolId,
-					   data     = <<>>
-					  },
-			    loop(State)
+                        ok ->
+                            case set_encoding(Sock, RecvPid, LogFun,
+                                              Encoding, Version) of
+                                {error, MySQLRes} ->
+                                    ?Log2(LogFun, error,
+                                          "mysql_conn: Failed set encoding "
+                                          "~p : ~p",
+                                          [Encoding,
+                                           mysql:get_result_reason(MySQLRes)]),
+                                    Parent ! {mysql_conn, self(),
+                                              {error, failed_set_encoding}};
+                                ok ->
+                                    Parent ! {mysql_conn, self(), ok},
+                                    State = #state{mysql_version=Version,
+                                                   recv_pid = RecvPid,
+                                                   socket   = Sock,
+                                                   log_fun  = LogFun,
+                                                   pool_id  = PoolId,
+                                                   data     = <<>>},
+                                    loop(State)
+                            end
 		    end;
 		{error, _Reason} ->
 		    Parent ! {mysql_conn, self(), {error, login_failed}}
@@ -366,6 +366,27 @@ init(Host, Port, User, Password, Database,
 		 "failed connecting to ~p:~p : ~p",
 		 [Host, Port, Error]),
 	    Parent ! {mysql_conn, self(), Error}
+    end.
+
+set_database(_Sock, _RecvPid, _LogFun, undefined, _Version) ->
+    ok;
+set_database(Sock, RecvPid, LogFun, Database, Version) ->
+    Db = iolist_to_binary(Database),
+    case do_query(Sock, RecvPid, LogFun,
+                  <<"use `", Db/binary, "`">>, Version) of
+        {error, _MySQLRes}=Error -> Error;
+        {_, _}                   -> ok
+    end.
+
+set_encoding(_Sock, _RecvPid, _LogFun, undefined, _Version) ->
+    ok;
+set_encoding(Sock, RecvPid, LogFun, Encoding, Version) ->
+    EncodingBinary = list_to_binary(atom_to_list(Encoding)),
+    case do_query(Sock, RecvPid, LogFun,
+                  <<"set names '", EncodingBinary/binary, "'">>, Version) of
+
+        {error, _MySQLRes}=Error -> Error;
+        {_, _}                   -> ok
     end.
 
 %%--------------------------------------------------------------------

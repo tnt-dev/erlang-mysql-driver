@@ -80,11 +80,13 @@
 
 
 %% External exports
--export([start_link/5,
+-export([start_link/4,
+	 start_link/5,
 	 start_link/6,
 	 start_link/7,
 	 start_link/8,
 
+	 start/4,
 	 start/5,
 	 start/6,
 	 start/7,
@@ -203,6 +205,9 @@ log(Module, Line, _Level, FormatFun) ->
 %%   Username::string(), Password::string(), Database::string(),
 %%   LogFun::undefined | function() of arity 4) ->
 %%     {ok, Pid} | ignore | {error, Err}
+start_link(PoolId, Host, User, Password) ->
+    start_link(PoolId, Host, User, Password, undefined).
+
 start_link(PoolId, Host, User, Password, Database) ->
     start_link(PoolId, Host, ?PORT, User, Password, Database).
 
@@ -227,6 +232,9 @@ start_link(PoolId, Host, Port, User, Password, Database, LogFun, Encoding) ->
 
 %% @doc These functions are similar to their start_link counterparts,
 %% but they call gen_server:start() instead of gen_server:start_link()
+start(PoolId, Host, User, Password) ->
+    start(PoolId, Host, User, Password, undefined).
+
 start(PoolId, Host, User, Password, Database) ->
     start(PoolId, Host, ?PORT, User, Password, Database).
 
