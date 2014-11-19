@@ -151,7 +151,7 @@ start(Host, Port, User, Password, Database, LogFun,
 			init(Host, Port, User, Password, Database,
 			     LogFun, Encoding, PoolId, ConnPid, Timeout)
 		end),
-    post_start(Pid, LogFun).
+    post_start(Pid, LogFun, Timeout).
 
 start_link(Host, Port, User, Password, Database,
            LogFun, Encoding, PoolId, Timeout) ->
@@ -160,10 +160,10 @@ start_link(Host, Port, User, Password, Database,
 			     init(Host, Port, User, Password, Database,
 				  LogFun, Encoding, PoolId, ConnPid, Timeout)
 		     end),
-    post_start(Pid, LogFun).
+    post_start(Pid, LogFun, Timeout).
 
 %% part of start/6 or start_link/6:
-post_start(Pid, LogFun) ->
+post_start(Pid, LogFun, Timeout) ->
     receive
 	{mysql_conn, Pid, ok} ->
 	    {ok, Pid};
@@ -175,13 +175,13 @@ post_start(Pid, LogFun) ->
 	    % listener socket.
 	    ?Log2(LogFun, debug, "Ignoring message from process ~p | Reason: ~p",
 		  [OtherPid, Reason]),
-	    post_start(Pid, LogFun);
+	    post_start(Pid, LogFun, Timeout);
 	Unknown ->
 	    ?Log2(LogFun, error,
 		 "received unknown signal: ~p", [Unknown]),
-		 post_start(Pid, LogFun)
-    after 5000 ->
-	    {error, "timed out"}
+		 post_start(Pid, LogFun, Timeout)
+    after Timeout ->
+	    {error, timeout}
     end.
 
 %%--------------------------------------------------------------------
