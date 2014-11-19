@@ -33,6 +33,18 @@
 
 -define(MAX_PACKET_SIZE, 1000000).
 
+-ifdef(old_hash).
+-define(SHA(Data), crypto:sha(Data)).
+-define(SHA_INIT, crypto:sha_init()).
+-define(SHA_UPDATE(Context, Data), crypto:sha_update(Context, Data)).
+-define(SHA_FINAL(Context), crypto:sha_final(Context)).
+-else.
+-define(SHA(Data), crypto:hash(sha, Data)).
+-define(SHA_INIT, crypto:hash_init(sha)).
+-define(SHA_UPDATE(Context, Data), crypto:hash_update(Context, Data)).
+-define(SHA_FINAL(Context), crypto:hash_final(Context)).
+-endif.
+
 %%====================================================================
 %% External functions
 %%====================================================================
@@ -175,11 +187,11 @@ bxor_binary(B1, B2) ->
 password_new([], _Salt) ->
     <<>>;
 password_new(Password, Salt) ->
-    Stage1 = crypto:sha(Password),
-    Stage2 = crypto:sha(Stage1),
-    Res = crypto:sha_final(
-	    crypto:sha_update(
-	      crypto:sha_update(crypto:sha_init(), Salt),
+    Stage1 = ?SHA(Password),
+    Stage2 = ?SHA(Stage1),
+    Res = ?SHA_FINAL(
+	    ?SHA_UPDATE(
+	      ?SHA_UPDATE(?SHA_INIT, Salt),
 	      Stage2)
 	   ),
     bxor_binary(Res, Stage1).
