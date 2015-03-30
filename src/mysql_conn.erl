@@ -180,8 +180,6 @@ post_start(Pid, LogFun, Timeout) ->
 	    ?Log2(LogFun, error,
 		 "received unknown signal: ~p", [Unknown]),
 		 post_start(Pid, LogFun, Timeout)
-    after Timeout ->
-	    {error, timeout}
     end.
 
 %%--------------------------------------------------------------------
